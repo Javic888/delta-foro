@@ -1,0 +1,169 @@
+<!DOCTYPE html><html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>DELTA SCRIPTS 🔥</title><style>
+body {
+  background: #0d0d0d;
+  color: #00ffcc;
+  font-family: monospace;
+  text-align: center;
+}
+
+h1 {
+  text-shadow: 0 0 10px #00ffcc;
+}
+
+input, textarea {
+  background: black;
+  color: #00ffcc;
+  border: 1px solid #00ffcc;
+  padding: 8px;
+  margin: 5px;
+  width: 80%;
+}
+
+button {
+  background: #00ffcc;
+  border: none;
+  padding: 8px;
+  margin: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.card {
+  border: 1px solid #00ffcc;
+  margin: 15px;
+  padding: 10px;
+  text-align: left;
+  box-shadow: 0 0 10px #00ffcc;
+}
+
+pre {
+  background: black;
+  padding: 10px;
+  overflow-x: auto;
+}
+</style></head><body><h1>⚡ DELTA SCRIPTS ⚡</h1><div id="loginBox">
+  <input id="user" placeholder="Usuario">
+  <input id="pass" type="password" placeholder="Password">
+  <br>
+  <button onclick="login()">Entrar</button>
+</div><div id="app" style="display:none"><h2 id="roleText"></h2><input id="search" placeholder="Buscar scripts..." oninput="buscar()"><br><input id="title" placeholder="Título del script">
+<textarea id="code" placeholder="Pega tu script aquí"></textarea><button onclick="subir()">Subir Script</button>
+
+<div id="scripts"></div><div id="adminPanel" style="display:none">
+  <h2>👑 PANEL ADMIN</h2>
+  <pre id="adminData"></pre>
+</div></div><script>
+let token = "";
+let role = "";
+
+const API = "https://delta-foro.onrender.com";
+
+// LOGIN
+async function login(){
+  let r = await fetch(API + "/login", {
+    method:"POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      username: user.value,
+      password: pass.value
+    })
+  });
+
+  let d = await r.json();
+
+  token = d.token;
+  role = d.role;
+
+  loginBox.style.display = "none";
+  app.style.display = "block";
+
+  roleText.innerText = role === "owner" ? "👑 ADMIN" : "👤 USER";
+
+  if(role === "owner"){
+    adminPanel.style.display = "block";
+    loadAdmin();
+  }
+
+  loadScripts();
+}
+
+// SUBIR
+async function subir(){
+  await fetch(API + "/scripts", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization": token
+    },
+    body: JSON.stringify({
+      title:title.value,
+      code:code.value
+    })
+  });
+
+  loadScripts();
+}
+
+// CARGAR SCRIPTS
+async function loadScripts(q=""){
+  let res = await fetch(API + "/scripts?q=" + q);
+  let data = await res.json();
+
+  scripts.innerHTML = data.map(s => `
+    <div class="card">
+      <h3>${s.title}</h3>
+      <pre>${s.code}</pre>  <p>👤 ${s.author}</p>
+
+  <button onclick="copyText(\`${s.code}\`)">📋 Copiar</button>
+  <button onclick="like(${s.id})">❤️ ${s.likes}</button>
+
+  ${role==="owner" ? `<button onclick="del(${s.id})">🗑️ Eliminar</button>` : ""}
+</div>
+
+`).join("");
+}
+
+// BUSCAR
+function buscar(){
+loadScripts(search.value);
+}
+
+// LIKE
+async function like(id){
+await fetch(API + "/scripts/" + id + "/like", {
+method:"POST",
+headers:{ "Authorization": token }
+});
+loadScripts();
+}
+
+// ELIMINAR
+async function del(id){
+await fetch(API + "/admin/scripts/" + id, {
+method:"DELETE",
+headers:{ "Authorization": token }
+});
+loadScripts();
+}
+
+// COPIAR
+function copyText(text){
+navigator.clipboard.writeText(text);
+alert("Copiado!");
+}
+
+// ADMIN PANEL
+async function loadAdmin(){
+let r = await fetch(API + "/admin", {
+headers:{ "Authorization": token }
+});
+let d = await r.json();
+adminData.innerText = JSON.stringify(d, null, 2);
+}
+</script>
+
+</body>
+</html>
